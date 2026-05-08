@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>五子棋对战</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 30px;
+      font-size: 2rem;
+    }
+
+    .logo {
+      font-size: 4rem;
+      margin-bottom: 20px;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      margin: 15px 0;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+
+    .input-group {
+      margin: 15px 0;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 1rem;
+      transition: border-color 0.3s ease;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .input-group label {
+      display: block;
+      text-align: left;
+      margin-bottom: 8px;
+      color: #666;
+      font-weight: 500;
+    }
+
+    .room-info {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+
+    .room-info p {
+      margin: 10px 0;
+      color: #333;
+    }
+
+    .room-id {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #667eea;
+      letter-spacing: 3px;
+    }
+
+    .copy-btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .copy-btn:hover {
+      background: #5a6fd6;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 25px;
+        margin: 10px;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+      }
+
+      .logo {
+        font-size: 3rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">⚫⚪</div>
+    <h1>五子棋对战</h1>
+    
+    <button class="btn btn-primary" id="createBtn">创建房间</button>
+    <button class="btn btn-secondary" id="joinBtn">加入房间</button>
+    
+    <div id="joinForm" class="hidden">
+      <div class="input-group">
+        <label for="roomId">房间号</label>
+        <input type="text" id="roomId" placeholder="请输入房间号">
+      </div>
+      <button class="btn btn-primary" id="submitJoin">进入房间</button>
+      <button class="btn btn-secondary" id="backBtn">返回</button>
+    </div>
+    
+
+  </div>
+
+  <script>
+    const createBtn = document.getElementById('createBtn');
+    const joinBtn = document.getElementById('joinBtn');
+    const joinForm = document.getElementById('joinForm');
+    const roomIdInput = document.getElementById('roomId');
+    const submitJoin = document.getElementById('submitJoin');
+    const backBtn = document.getElementById('backBtn');
+
+    function generateRoomId() {
+      return Math.random().toString(36).substring(2, 8).toUpperCase();
+    }
+
+    function createRoom() {
+      const roomId = generateRoomId();
+      const roomData = {
+        players: [{ ready: false, color: 'black' }],
+        board: Array(15).fill(null).map(() => Array(15).fill(null)),
+        currentPlayer: 'black',
+        gameStarted: false,
+        history: [],
+        lastMove: null,
+        pendingUndo: null
+      };
+      localStorage.setItem(`gomoku_${roomId}`, JSON.stringify(roomData));
+      window.location.href = `game.html?room=${roomId}&player=black`;
+    }
+
+    function joinRoom(roomId) {
+      roomId = roomId.toUpperCase();
+      const roomData = localStorage.getItem(`gomoku_${roomId}`);
+      if (!roomData) {
+        alert('房间不存在');
+        return;
+      }
+      const parsedData = JSON.parse(roomData);
+      if (parsedData.players.length >= 2) {
+        alert('房间已满');
+        return;
+      }
+      parsedData.players.push({ ready: false, color: 'white' });
+      localStorage.setItem(`gomoku_${roomId}`, JSON.stringify(parsedData));
+      window.location.href = `game.html?room=${roomId}&player=white`;
+    }
+
+    createBtn.addEventListener('click', createRoom);
+
+    joinBtn.addEventListener('click', () => {
+      joinForm.classList.remove('hidden');
+      createBtn.classList.add('hidden');
+      joinBtn.classList.add('hidden');
+    });
+
+    submitJoin.addEventListener('click', () => {
+      const roomId = roomIdInput.value.trim();
+      if (!roomId) {
+        alert('请输入房间号');
+        return;
+      }
+      joinRoom(roomId);
+    });
+
+    backBtn.addEventListener('click', () => {
+      joinForm.classList.add('hidden');
+      createBtn.classList.remove('hidden');
+      joinBtn.classList.remove('hidden');
+      roomIdInput.value = '';
+    });
+  </script>
+</body>
+</html>
