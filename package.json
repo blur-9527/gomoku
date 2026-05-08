@@ -1,0 +1,22 @@
+{
+  "name": "gomoku-game",
+  "version": "1.0.0",
+  "description": "五子棋对战网页 - WebSocket 版本",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "mkdir -p dist && cp -r public/* dist/"
+  },
+  "keywords": [
+    "gomoku",
+    "五子棋",
+    "game",
+    "websocket"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.4"
+  }
+}
