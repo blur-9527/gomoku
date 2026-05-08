@@ -695,20 +695,6 @@
       window.location.href = '/';
     });
 
-    window.addEventListener('beforeunload', (e) => {
-      e.preventDefault();
-      e.returnValue = '';
-      return '';
-    });
-
-    window.addEventListener('keydown', (e) => {
-      if ((e.key === 'F5') || 
-          ((e.ctrlKey || e.metaKey) && e.key === 'r')) {
-        e.preventDefault();
-        alert('游戏进行中，禁止刷新页面！');
-      }
-    });
-
     initBoard();
   </script>
 </body>
