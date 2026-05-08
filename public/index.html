@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>五子棋对战</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }
+
+    h1 {
+      color: #667eea;
+      margin-bottom: 10px;
+      font-size: 2rem;
+    }
+
+    .subtitle {
+      color: #999;
+      margin-bottom: 30px;
+    }
+
+    .logo {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 20px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 2.5rem;
+      font-weight: bold;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 15px;
+      margin-bottom: 15px;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    .input-group label {
+      display: block;
+      text-align: left;
+      margin-bottom: 8px;
+      color: #333;
+      font-weight: 500;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 12px 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 1rem;
+      transition: border-color 0.2s ease;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .input-group input::placeholder {
+      color: #aaa;
+    }
+
+    .error-message {
+      color: #f44336;
+      margin-top: 10px;
+      display: none;
+    }
+
+    .loading {
+      display: none;
+      margin-top: 10px;
+      color: #667eea;
+    }
+
+    @media (max-width: 500px) {
+      .container {
+        padding: 30px 20px;
+      }
+
+      h1 {
+        font-size: 1.6rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">G</div>
+    <h1>五子棋对战</h1>
+    <p class="subtitle">双人在线对战</p>
+
+    <button class="btn btn-primary" id="createBtn">创建房间</button>
+    
+    <div class="input-group">
+      <label for="roomId">房间号</label>
+      <input type="text" id="roomId" placeholder="请输入6位房间号" maxlength="6" />
+    </div>
+    
+    <button class="btn btn-secondary" id="joinBtn">加入房间</button>
+    
+    <div class="error-message" id="errorMessage"></div>
+    <div class="loading" id="loading">连接中...</div>
+  </div>
+
+  <script>
+    const createBtn = document.getElementById('createBtn');
+    const joinBtn = document.getElementById('joinBtn');
+    const roomIdInput = document.getElementById('roomId');
+    const errorMessage = document.getElementById('errorMessage');
+    const loading = document.getElementById('loading');
+
+    const SERVER_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+      ? 'http://localhost:3000' 
+      : window.location.origin;
+
+    function showError(msg) {
+      errorMessage.textContent = msg;
+      errorMessage.style.display = 'block';
+      loading.style.display = 'none';
+    }
+
+    function hideError() {
+      errorMessage.style.display = 'none';
+    }
+
+    createBtn.addEventListener('click', async () => {
+      hideError();
+      loading.style.display = 'block';
+      
+      try {
+        const response = await fetch(`${SERVER_URL}/create-room`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          window.location.href = `${SERVER_URL}/game?room=${data.roomId}&player=black`;
+        } else {
+          showError(data.message || '创建房间失败');
+        }
+      } catch (error) {
+        showError('无法连接服务器，请稍后重试');
+      }
+    });
+
+    joinBtn.addEventListener('click', async () => {
+      const roomId = roomIdInput.value.trim().toUpperCase();
+      
+      if (!roomId) {
+        showError('请输入房间号');
+        return;
+      }
+      
+      if (roomId.length !== 6) {
+        showError('房间号必须是6位');
+        return;
+      }
+      
+      hideError();
+      loading.style.display = 'block';
+      
+      try {
+        const response = await fetch(`${SERVER_URL}/join-room`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ roomId })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          window.location.href = `${SERVER_URL}/game?room=${roomId}&player=white`;
+        } else {
+          showError(data.message || '加入房间失败');
+        }
+      } catch (error) {
+        showError('无法连接服务器，请稍后重试');
+      }
+    });
+
+    roomIdInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        joinBtn.click();
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>五子棋对战 - 游戏中</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      max-width: 600px;
+      margin-bottom: 20px;
+    }
+    .room-id-display {
+      background: white;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: bold;
+      color: #667eea;
+      letter-spacing: 2px;
+      cursor: pointer;
+    }
+    .back-btn {
+      background: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      color: #667eea;
+      font-weight: bold;
+    }
+    .game-container {
+      background: white;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 600px;
+      width: 100%;
+    }
+    .players-info {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 20px;
+    }
+    .player {
+      text-align: center;
+      padding: 15px;
+      border-radius: 10px;
+      min-width: 120px;
+    }
+    .player.black { background: #333; color: white; }
+    .player.white { background: #f0f0f0; color: #333; border: 2px solid #333; }
+    .player.ready { box-shadow: 0 0 15px rgba(76, 175, 80, 0.5); }
+    .player.current { animation: pulse 1.5s infinite; }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    .player-color {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      margin: 0 auto 10px;
+      border: 2px solid #666;
+    }
+    .player-color.black { background: #1a1a1a; }
+    .player-color.white { background: white; border-color: #999; }
+    .board-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(15, 1fr);
+      background: linear-gradient(145deg, #DEB887, #D2A679);
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: inset 0 2px 10px rgba(0,0,0,0.3), 0 4px 20px rgba(0,0,0,0.2);
+      border: 3px solid #8B7355;
+    }
+    .cell {
+      width: 26px;
+      height: 26px;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+    }
+    .cell::before {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 1px;
+      background: rgba(0, 0, 0, 0.6);
+    }
+    .cell::after {
+      content: '';
+      position: absolute;
+      width: 1px;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+    }
+    .cell.star-point::before {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: #1a1a1a;
+      border-radius: 50%;
+      z-index: 1;
+    }
+    .stone {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      position: relative;
+      z-index: 2;
+    }
+    .stone.black {
+      background: radial-gradient(circle at 35% 35%, #5a5a5a, #1a1a1a);
+      box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5), inset -2px -2px 4px rgba(255,255,255,0.1);
+    }
+    .stone.white {
+      background: radial-gradient(circle at 35% 35%, #ffffff, #d0d0d0);
+      box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3), inset -2px -2px 4px rgba(0,0,0,0.1);
+      border: 1px solid #ccc;
+    }
+    .stone.last-move::after {
+      content: '';
+      position: absolute;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #ff4444;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 3;
+    }
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-ready { background: linear-gradient(135deg, #4CAF50, #45a049); color: white; }
+    .btn-undo { background: linear-gradient(135deg, #ff9800, #f57c00); color: white; }
+    .btn-surrender { background: linear-gradient(135deg, #f44336, #da190b); color: white; }
+    .btn-share { background: linear-gradient(135deg, #2196F3, #1976D2); color: white; }
+    .btn:hover:not(:disabled) { transform: translateY(-2px); }
+    .btn:disabled { background: #ccc; cursor: not-allowed; }
+    .status {
+      text-align: center;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 10px;
+      font-size: 1.1rem;
+      font-weight: 500;
+    }
+    .status.win { color: #4CAF50; font-size: 1.3rem; }
+    .status.lose { color: #f44336; font-size: 1.3rem; }
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+    .modal-overlay.show { opacity: 1; visibility: visible; }
+    .modal {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      text-align: center;
+      transform: scale(0.9);
+      transition: transform 0.3s ease;
+      max-width: 320px;
+      width: 90%;
+    }
+    .modal-overlay.show .modal { transform: scale(1); }
+    .modal h3 { margin-bottom: 20px; color: #333; }
+    .modal p { margin-bottom: 25px; color: #666; }
+    .modal-buttons { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+    .modal-btn {
+      padding: 12px 30px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 1rem;
+      min-width: 100px;
+    }
+    .modal-btn.accept { background: linear-gradient(135deg, #4CAF50, #45a049); color: white; }
+    .modal-btn.reject { background: #f0f0f0; color: #333; }
+    .share-link {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      word-break: break-all;
+    }
+    .countdown {
+      font-size: 4rem;
+      font-weight: bold;
+      color: #667eea;
+      animation: countdown-pulse 1s ease-in-out;
+    }
+    @keyframes countdown-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+    }
+    @media (max-width: 500px) {
+      .cell { width: 20px; height: 20px; }
+      .stone { width: 16px; height: 16px; }
+      .board { padding: 12px; }
+      .countdown { font-size: 3rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="room-id-display" id="roomIdDisplay" title="点击复制房间号"></div>
+    <button class="back-btn" id="exitGameBtn">退出</button>
+  </div>
+
+  <div class="game-container">
+    <div class="players-info">
+      <div class="player black" id="playerBlack">
+        <div class="player-color black"></div>
+        <div class="player-name">黑方</div>
+        <div class="player-status" id="playerBlackStatus">等待中</div>
+      </div>
+      <div class="player white" id="playerWhite">
+        <div class="player-color white"></div>
+        <div class="player-name">白方</div>
+        <div class="player-status" id="playerWhiteStatus">等待中</div>
+      </div>
+    </div>
+
+    <div class="board-container">
+      <div class="board" id="board"></div>
+    </div>
+
+    <div class="controls">
+      <button class="btn btn-ready" id="readyBtn">准备</button>
+      <button class="btn btn-share" id="shareBtn">分享邀请</button>
+      <button class="btn btn-undo" id="undoBtn" disabled>悔棋</button>
+      <button class="btn btn-surrender" id="surrenderBtn" disabled>投降</button>
+    </div>
+
+    <div class="status" id="status">等待对手加入...</div>
+  </div>
+
+  <div class="modal-overlay" id="undoModal">
+    <div class="modal">
+      <h3>对手请求悔棋</h3>
+      <p>对手希望悔棋，是否同意？</p>
+      <div class="modal-buttons">
+        <button class="modal-btn accept" id="acceptUndo">同意</button>
+        <button class="modal-btn reject" id="rejectUndo">拒绝</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="surrenderModal">
+    <div class="modal">
+      <h3>确认投降</h3>
+      <p>确定要投降吗？投降后将直接判负。</p>
+      <div class="modal-buttons">
+        <button class="modal-btn accept" id="confirmSurrender">确定投降</button>
+        <button class="modal-btn reject" id="cancelSurrender">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="shareModal">
+    <div class="modal">
+      <h3>分享邀请链接</h3>
+      <p>复制链接发给朋友，邀请对方加入对战！</p>
+      <div class="share-link" id="shareLink"></div>
+      <div class="modal-buttons">
+        <button class="modal-btn accept" id="copyLink">复制链接</button>
+        <button class="modal-btn reject" id="closeShare">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="countdownModal">
+    <div class="modal">
+      <h3>双方已准备！</h3>
+      <p>游戏即将开始</p>
+      <div class="countdown" id="countdown">3</div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="gameEndModal">
+    <div class="modal">
+      <h3 id="gameEndTitle"></h3>
+      <p id="gameEndMessage"></p>
+      <div class="modal-buttons">
+        <button class="modal-btn accept" id="rematchBtn">再次对局</button>
+        <button class="modal-btn reject" id="exitBtn">退出</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="opponentExitModal">
+    <div class="modal">
+      <h3>对手已退出</h3>
+      <p>对手已选择退出，游戏结束。</p>
+      <div class="modal-buttons">
+        <button class="modal-btn accept" onclick="window.location.href='/'">返回主页</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="confirmExitModal">
+    <div class="modal">
+      <h3>确认退出</h3>
+      <p>确定要退出房间吗？退出后对手将收到通知。</p>
+      <div class="modal-buttons">
+        <button class="modal-btn accept" id="confirmExitBtn">确定退出</button>
+        <button class="modal-btn reject" id="cancelExitBtn">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('room');
+    const playerColor = urlParams.get('player') || 'black';
+    
+    const SERVER_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+      ? 'http://localhost:3000' 
+      : window.location.origin;
+
+    const socket = io(SERVER_URL, {
+      transports: ['websocket', 'polling']
+    });
+    
+    let board = Array(15).fill(null).map(() => Array(15).fill(null));
+    let currentPlayer = 'black';
+    let myColor = playerColor;
+    let gameStarted = false;
+    let lastMove = null;
+    let gameEnded = false;
+    let opponentRematch = false;
+
+    document.getElementById('roomIdDisplay').textContent = `房间号: ${roomId}`;
+    
+    socket.on('connect', () => {
+      console.log('WebSocket 连接成功');
+      socket.emit('joinRoom', roomId);
+    });
+    
+    socket.on('connect_error', (error) => {
+      console.error('WebSocket 连接失败:', error);
+      alert('无法连接到服务器，请检查网络连接');
+    });
+    
+    socket.on('disconnect', () => {
+      console.log('WebSocket 断开连接');
+    });
+
+    function isStarPoint(row, col) {
+      const starPoints = [
+        [3, 3], [3, 7], [3, 11],
+        [7, 3], [7, 7], [7, 11],
+        [11, 3], [11, 7], [11, 11]
+      ];
+      return starPoints.some(([r, c]) => r === row && c === col);
+    }
+
+    function initBoard() {
+      const boardElement = document.getElementById('board');
+      boardElement.innerHTML = '';
+      
+      for (let row = 0; row < 15; row++) {
+        for (let col = 0; col < 15; col++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          
+          if (isStarPoint(row, col)) {
+            cell.classList.add('star-point');
+          }
+          
+          cell.dataset.row = row;
+          cell.dataset.col = col;
+          
+          if (board[row][col]) {
+            const stone = document.createElement('div');
+            stone.className = `stone ${board[row][col]}`;
+            if (lastMove && lastMove.row === row && lastMove.col === col) {
+              stone.classList.add('last-move');
+            }
+            cell.appendChild(stone);
+          }
+          
+          cell.addEventListener('click', handleCellClick);
+          boardElement.appendChild(cell);
+        }
+      }
+    }
+
+    function handleCellClick(e) {
+      console.log('点击棋盘:', { gameStarted, gameEnded, currentPlayer, myColor });
+      
+      if (!gameStarted) {
+        console.log('游戏未开始');
+        return;
+      }
+      if (gameEnded) {
+        console.log('游戏已结束');
+        return;
+      }
+      
+      const target = e.target;
+      const cell = target.classList.contains('cell') ? target : target.parentElement;
+      const row = parseInt(cell.dataset.row);
+      const col = parseInt(cell.dataset.col);
+      
+      if (isNaN(row) || isNaN(col)) return;
+      if (board[row][col]) {
+        console.log('该位置已有棋子');
+        return;
+      }
+      if (currentPlayer !== myColor) {
+        console.log(`不是你的回合，当前是${currentPlayer}回合，你是${myColor}`);
+        return;
+      }
+      
+      console.log(`发送落子: ${row}, ${col}`);
+      socket.emit('move', { row, col });
+    }
+
+    function updateCurrentPlayerDisplay() {
+      document.getElementById('playerBlack').classList.remove('current');
+      document.getElementById('playerWhite').classList.remove('current');
+      
+      if (currentPlayer === 'black') {
+        document.getElementById('playerBlack').classList.add('current');
+      } else {
+        document.getElementById('playerWhite').classList.add('current');
+      }
+      
+      const status = document.getElementById('status');
+      status.className = 'status';
+      status.textContent = currentPlayer === myColor ? '你的回合' : '对手回合';
+      
+      document.getElementById('undoBtn').disabled = !gameStarted || board.every(row => row.every(cell => cell === null)) || gameEnded;
+      document.getElementById('surrenderBtn').disabled = !gameStarted || gameEnded;
+    }
+
+    function startCountdown() {
+      const modal = document.getElementById('countdownModal');
+      const countdownEl = document.getElementById('countdown');
+      modal.classList.add('show');
+      
+      let count = 3;
+      countdownEl.textContent = count;
+      
+      const timer = setInterval(() => {
+        count--;
+        countdownEl.textContent = count;
+        
+        if (count <= 0) {
+          clearInterval(timer);
+          modal.classList.remove('show');
+        }
+      }, 1000);
+    }
+
+    function endGame(won) {
+      gameEnded = true;
+      
+      const status = document.getElementById('status');
+      if (won) {
+        status.className = 'status win';
+        status.textContent = '你获胜了！';
+      } else {
+        status.className = 'status lose';
+        status.textContent = '你输了！';
+      }
+      
+      document.getElementById('undoBtn').disabled = true;
+      document.getElementById('surrenderBtn').disabled = true;
+      
+      const modal = document.getElementById('gameEndModal');
+      document.getElementById('gameEndTitle').textContent = won ? '🎉 恭喜获胜！' : '😔 游戏结束';
+      document.getElementById('gameEndMessage').textContent = won ? '你成功连成五子！' : '对手连成五子，你输了！';
+      modal.classList.add('show');
+    }
+
+    document.getElementById('readyBtn').addEventListener('click', () => {
+      socket.emit('ready');
+      document.getElementById('readyBtn').style.display = 'none';
+      document.getElementById(`player${myColor.charAt(0).toUpperCase() + myColor.slice(1)}Status`).textContent = '已准备';
+      document.getElementById(`player${myColor.charAt(0).toUpperCase() + myColor.slice(1)}`).classList.add('ready');
+      document.getElementById('status').textContent = '等待对手准备...';
+    });
+
+    document.getElementById('shareBtn').addEventListener('click', () => {
+      const shareUrl = `${window.location.origin}/game?room=${roomId}&player=${myColor === 'black' ? 'white' : 'black'}`;
+      document.getElementById('shareLink').textContent = shareUrl;
+      document.getElementById('shareModal').classList.add('show');
+    });
+
+    document.getElementById('copyLink').addEventListener('click', () => {
+      const shareUrl = `${window.location.origin}/game?room=${roomId}&player=${myColor === 'black' ? 'white' : 'black'}`;
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        alert('链接已复制到剪贴板');
+        document.getElementById('shareModal').classList.remove('show');
+      });
+    });
+
+    document.getElementById('closeShare').addEventListener('click', () => {
+      document.getElementById('shareModal').classList.remove('show');
+    });
+
+    document.getElementById('roomIdDisplay').addEventListener('click', () => {
+      navigator.clipboard.writeText(roomId).then(() => {
+        alert('房间号已复制到剪贴板');
+      });
+    });
+
+    document.getElementById('undoBtn').addEventListener('click', () => {
+      socket.emit('undoRequest');
+      alert('已发送悔棋请求，请等待对方确认');
+    });
+
+    document.getElementById('acceptUndo').addEventListener('click', () => {
+      socket.emit('undoResponse', { accept: true });
+      document.getElementById('undoModal').classList.remove('show');
+    });
+
+    document.getElementById('rejectUndo').addEventListener('click', () => {
+      socket.emit('undoResponse', { accept: false });
+      document.getElementById('undoModal').classList.remove('show');
+    });
+
+    document.getElementById('surrenderBtn').addEventListener('click', () => {
+      document.getElementById('surrenderModal').classList.add('show');
+    });
+
+    document.getElementById('confirmSurrender').addEventListener('click', () => {
+      socket.emit('surrender');
+      document.getElementById('surrenderModal').classList.remove('show');
+    });
+
+    document.getElementById('cancelSurrender').addEventListener('click', () => {
+      document.getElementById('surrenderModal').classList.remove('show');
+    });
+
+    document.getElementById('rematchBtn').addEventListener('click', () => {
+      socket.emit('rematch');
+      document.getElementById('gameEndModal').querySelector('p').textContent = '等待对方同意再次对局...';
+    });
+
+    document.getElementById('exitBtn').addEventListener('click', () => {
+      socket.emit('exit');
+      window.location.href = '/';
+    });
+
+    document.getElementById('exitGameBtn').addEventListener('click', () => {
+      document.getElementById('confirmExitModal').classList.add('show');
+    });
+
+    document.getElementById('confirmExitBtn').addEventListener('click', () => {
+      socket.emit('exit');
+      document.getElementById('confirmExitModal').classList.remove('show');
+      window.location.href = '/';
+    });
+
+    document.getElementById('cancelExitBtn').addEventListener('click', () => {
+      document.getElementById('confirmExitModal').classList.remove('show');
+    });
+
+    socket.on('opponentJoined', () => {
+      document.getElementById('status').textContent = '对手已加入，请准备';
+      document.getElementById('shareBtn').disabled = true;
+    });
+
+    socket.on('playerReady', ({ color }) => {
+      document.getElementById(`player${color.charAt(0).toUpperCase() + color.slice(1)}`).classList.add('ready');
+      document.getElementById(`player${color.charAt(0).toUpperCase() + color.slice(1)}Status`).textContent = '已准备';
+    });
+
+    socket.on('gameStart', () => {
+      gameStarted = true;
+      currentPlayer = 'black';
+      startCountdown();
+      
+      setTimeout(() => {
+        updateCurrentPlayerDisplay();
+      }, 4000);
+    });
+
+    socket.on('move', ({ row, col, player, currentPlayer: newCurrentPlayer }) => {
+      console.log('收到服务器落子:', { row, col, player, newCurrentPlayer });
+      board[row][col] = player;
+      lastMove = { row, col };
+      currentPlayer = newCurrentPlayer;
+      initBoard();
+      updateCurrentPlayerDisplay();
+    });
+
+    socket.on('gameEnd', ({ winner }) => {
+      const won = winner === myColor;
+      endGame(won);
+    });
+
+    socket.on('undoRequest', () => {
+      document.getElementById('undoModal').classList.add('show');
+    });
+
+    socket.on('undoAccepted', ({ board: newBoard, lastMove: newLastMove, currentPlayer: newCurrentPlayer }) => {
+      board = newBoard;
+      lastMove = newLastMove;
+      currentPlayer = newCurrentPlayer;
+      initBoard();
+      updateCurrentPlayerDisplay();
+    });
+
+    socket.on('undoRejected', () => {
+      alert('对手拒绝了悔棋请求');
+    });
+
+    socket.on('rematchRequested', () => {
+      opponentRematch = true;
+    });
+
+    socket.on('rematchAccepted', () => {
+      board = Array(15).fill(null).map(() => Array(15).fill(null));
+      currentPlayer = 'black';
+      lastMove = null;
+      gameStarted = false;
+      gameEnded = false;
+      opponentRematch = false;
+      
+      document.getElementById('playerBlack').classList.remove('ready');
+      document.getElementById('playerWhite').classList.remove('ready');
+      document.getElementById('playerBlackStatus').textContent = '等待中';
+      document.getElementById('playerWhiteStatus').textContent = '等待中';
+      document.getElementById('status').textContent = '等待对手准备...';
+      document.getElementById('readyBtn').style.display = 'block';
+      document.getElementById('undoBtn').disabled = true;
+      document.getElementById('surrenderBtn').disabled = true;
+      document.getElementById('gameEndModal').classList.remove('show');
+      
+      initBoard();
+      startCountdown();
+      
+      setTimeout(() => {
+        gameStarted = true;
+        updateCurrentPlayerDisplay();
+      }, 4000);
+    });
+
+    socket.on('opponentExited', () => {
+      document.getElementById('gameEndModal').classList.remove('show');
+      document.getElementById('opponentExitModal').classList.add('show');
+    });
+
+    socket.on('error', (msg) => {
+      alert(msg);
+      window.location.href = '/';
+    });
+
+    initBoard();
+  </script>
+</body>
+</html>
